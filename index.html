@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Saisie du Réalisé - Chantier</title>
+  <style>
+    body { font-family: sans-serif; margin: 40px; max-width: 800px; }
+    h1, h2 { color: #333; }
+    label { display: block; margin: 15px 0 5px; }
+    select, input[type="month"], input[type="number"] { width: 100%; padding: 8px; margin-bottom: 10px; }
+    button { padding: 10px 20px; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #eee; }
+    .alert { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Saisie du Réalisé</h1>
+
+  <label for="chantier">Chantier :</label>
+  <select id="chantier"></select>
+
+  <label for="mois">Mois :</label>
+  <input type="month" id="mois">
+
+  <label for="equipe">Équipe :</label>
+  <select id="equipe"></select>
+
+  <label for="montant">Montant réalisé (€) :</label>
+  <input type="number" id="montant" min="0" step="0.01">
+  
+  <div id="suiviGlobalContainer">
+  <h2>Suivi du Chantier sélectionné</h2>
+  <table id="suiviGlobalTable">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+  <button onclick="enregistrerRealisation()">Enregistrer</button>
+
+  <script>
+  const chantiers = [
+    { id: 1, nom: "Chantier A" },
+    { id: 2, nom: "Chantier B" }
+  ];
+  const equipes = [
+    { id: 1, nom: "Équipe Interne 1" },
+    { id: 2, nom: "Sous-traitant XYZ" }
+  ];
+
+  function init() {
+    const chantierSelect = document.getElementById("chantier");
+    chantiers.forEach(c => chantierSelect.innerHTML += `<option value="${c.nom}">${c.nom}</option>`);
+
+    const equipeSelect = document.getElementById("equipe");
+    equipes.forEach(e => equipeSelect.innerHTML += `<option value="${e.nom}">${e.nom}</option>`);
+
+    chantierSelect.addEventListener("change", e => {
+      chargerSuiviGlobal(e.target.value);
+    });
+  }
+
+  async function chargerSuiviGlobal(chantier) {
+    const url = `https://script.google.com/macros/s/AKfycbzX6PoG3wY3bV09kuw7Q9H2voLkHFI0LrjrD3Vw26uZEHkD1IIz-K3710hKEuH0deBa/exec?chantier=${encodeURIComponent(chantier)}`;
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const table = document.getElementById("suiviGlobalTable");
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='99'>Aucune donnée disponible</td></tr>";
+        return;
+      }
+
+      const headers = Object.keys(data[0]);
+      thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+
+      data.forEach(row => {
+        tbody.innerHTML += "<tr>" + headers.map(h => `<td>${row[h]}</td>`).join("") + "</tr>";
+      });
+    } catch (error) {
+      console.error("Erreur récupération Suivi Global :", error);
+    }
+  }
+
+  async function enregistrerRealisation() {
+    const chantier = document.getElementById("chantier").value;
+    const mois = document.getElementById("mois").value;
+    const equipe = document.getElementById("equipe").value;
+    const montant = parseFloat(document.getElementById("montant").value);
+
+    if (!chantier || !mois || !equipe || isNaN(montant)) {
+      alert("Veuillez remplir tous les champs.");
+      return;
+    }
+
+    const data = { chantier, mois, equipe, montant };
+
+    try {
+      await fetch("https://script.google.com/macros/s/AKfycbzX6PoG3wY3bV09kuw7Q9H2voLkHFI0LrjrD3Vw26uZEHkD1IIz-K3710hKEuH0deBa/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      alert("Données envoyées avec succès !");
+      document.getElementById("mois").value = "";
+      document.getElementById("montant").value = "";
+    } catch (error) {
+      alert("Erreur lors de l'envoi des données : " + error);
+    }
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>
