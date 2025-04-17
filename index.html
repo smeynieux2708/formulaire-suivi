@@ -83,7 +83,7 @@
       thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
 
       data.forEach(row => {
-        tbody.innerHTML += "<tr>" + headers.map(h => `<td>${row[h]}</td>`).join("") + "</tr>";
+        tbody.innerHTML += "<tr>" + headers.map(h => `<td>${row[h] ?? ''}</td>`).join("") + "</tr>";
       });
     } catch (error) {
       console.error("Erreur récupération Suivi Global :", error);
