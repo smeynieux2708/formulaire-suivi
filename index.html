@@ -29,97 +29,100 @@
 
   <label for="montant">Montant réalisé (€) :</label>
   <input type="number" id="montant" min="0" step="0.01">
-  
+
   <div id="suiviGlobalContainer">
-  <h2>Suivi du Chantier sélectionné</h2>
-  <table id="suiviGlobalTable">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
-</div>
+    <h2>Suivi du Chantier sélectionné</h2>
+    <table id="suiviGlobalTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <button onclick="enregistrerRealisation()">Enregistrer</button>
 
   <script>
-  const chantiers = [
-    { id: 1, nom: "Chantier A" },
-    { id: 2, nom: "Chantier B" }
-  ];
-  const equipes = [
-    { id: 1, nom: "Équipe Interne 1" },
-    { id: 2, nom: "Sous-traitant XYZ" }
-  ];
+    const chantiers = [
+      { id: 1, nom: "Chantier A" },
+      { id: 2, nom: "Chantier B" }
+    ];
+    const equipes = [
+      { id: 1, nom: "Équipe Interne 1" },
+      { id: 2, nom: "Sous-traitant XYZ" }
+    ];
 
-  function init() {
-    const chantierSelect = document.getElementById("chantier");
-    chantiers.forEach(c => chantierSelect.innerHTML += `<option value="${c.nom}">${c.nom}</option>`);
+    function init() {
+      const chantierSelect = document.getElementById("chantier");
+      chantiers.forEach(c => chantierSelect.innerHTML += `<option value="${c.nom}">${c.nom}</option>`);
 
-    const equipeSelect = document.getElementById("equipe");
-    equipes.forEach(e => equipeSelect.innerHTML += `<option value="${e.nom}">${e.nom}</option>`);
+      const equipeSelect = document.getElementById("equipe");
+      equipes.forEach(e => equipeSelect.innerHTML += `<option value="${e.nom}">${e.nom}</option>`);
 
-    chantierSelect.addEventListener("change", e => {
-      chargerSuiviGlobal(e.target.value);
-    });
-  }
+      chantierSelect.addEventListener("change", e => {
+        chargerSuiviGlobal(e.target.value);
+      });
+    }
 
-  async function chargerSuiviGlobal(chantier) {
-    const url = `https://script.google.com/macros/s/AKfycbzX6PoG3wY3bV09kuw7Q9H2voLkHFI0LrjrD3Vw26uZEHkD1IIz-K3710hKEuH0deBa/exec?chantier=${encodeURIComponent(chantier)}`;
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
+    async function chargerSuiviGlobal(chantier) {
+      const url = `https://script.google.com/macros/s/AKfycbzX6PoG3wY3bV09kuw7Q9H2voLkHFI0LrjrD3Vw26uZEHkD1IIz-K3710hKEuH0deBa/exec?chantier=${encodeURIComponent(chantier)}`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log("🔄 Données reçues du script Apps Script :", data);
 
-      const table = document.getElementById("suiviGlobalTable");
-      const thead = table.querySelector("thead");
-      const tbody = table.querySelector("tbody");
-      thead.innerHTML = "";
-      tbody.innerHTML = "";
+        const table = document.getElementById("suiviGlobalTable");
+        const thead = table.querySelector("thead");
+        const tbody = table.querySelector("tbody");
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
 
-      if (data.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='99'>Aucune donnée disponible</td></tr>";
+        if (!data.length) {
+          tbody.innerHTML = "<tr><td colspan='99'>Aucune donnée disponible</td></tr>";
+          return;
+        }
+
+        const headers = Object.keys(data[0]).map(h => h.trim());
+        console.log("🧩 En-têtes détectés :", headers);
+
+        thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+
+        data.forEach(row => {
+          tbody.innerHTML += "<tr>" + headers.map(h => `<td>${row[h] ?? ''}</td>`).join("") + "</tr>";
+        });
+      } catch (error) {
+        console.error("❌ Erreur récupération Suivi Global :", error);
+      }
+    }
+
+    async function enregistrerRealisation() {
+      const chantier = document.getElementById("chantier").value;
+      const mois = document.getElementById("mois").value;
+      const equipe = document.getElementById("equipe").value;
+      const montant = parseFloat(document.getElementById("montant").value);
+
+      if (!chantier || !mois || !equipe || isNaN(montant)) {
+        alert("Veuillez remplir tous les champs.");
         return;
       }
 
-      const headers = Object.keys(data[0]);
-      thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+      const data = { chantier, mois, equipe, montant };
 
-      data.forEach(row => {
-        tbody.innerHTML += "<tr>" + headers.map(h => `<td>${row[h] ?? ''}</td>`).join("") + "</tr>";
-      });
-    } catch (error) {
-      console.error("Erreur récupération Suivi Global :", error);
-    }
-  }
+      try {
+        await fetch("https://script.google.com/macros/s/AKfycbzX6PoG3wY3bV09kuw7Q9H2voLkHFI0LrjrD3Vw26uZEHkD1IIz-K3710hKEuH0deBa/exec", {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
 
-  async function enregistrerRealisation() {
-    const chantier = document.getElementById("chantier").value;
-    const mois = document.getElementById("mois").value;
-    const equipe = document.getElementById("equipe").value;
-    const montant = parseFloat(document.getElementById("montant").value);
-
-    if (!chantier || !mois || !equipe || isNaN(montant)) {
-      alert("Veuillez remplir tous les champs.");
-      return;
+        alert("Données envoyées avec succès !");
+        document.getElementById("mois").value = "";
+        document.getElementById("montant").value = "";
+      } catch (error) {
+        alert("Erreur lors de l'envoi des données : " + error);
+      }
     }
 
-    const data = { chantier, mois, equipe, montant };
-
-    try {
-      await fetch("https://script.google.com/macros/s/AKfycbzX6PoG3wY3bV09kuw7Q9H2voLkHFI0LrjrD3Vw26uZEHkD1IIz-K3710hKEuH0deBa/exec", {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-
-      alert("Données envoyées avec succès !");
-      document.getElementById("mois").value = "";
-      document.getElementById("montant").value = "";
-    } catch (error) {
-      alert("Erreur lors de l'envoi des données : " + error);
-    }
-  }
-
-  window.onload = init;
-</script>
+    window.onload = init;
+  </script>
 </body>
 </html>
